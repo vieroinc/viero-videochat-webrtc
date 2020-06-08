@@ -1,0 +1,20 @@
+{
+  "name": "integration-example-client",
+  "version": "1.0.0",
+  "license": "ISC",
+  "scripts": {
+    "start": "webpack-dev-server",
+    "build": "webpack"
+  },
+  "dependencies": {
+    "@viero/common": "^1.0.1",
+    "lit-html": "^1.2.1",
+    "socket.io-client": "^2.3.0",
+    "uuid": "^8.1.0"
+  },
+  "devDependencies": {
+    "webpack": "^4.35.3",
+    "webpack-cli": "^3.3.5",
+    "webpack-dev-server": "^3.7.2"
+  }
+}

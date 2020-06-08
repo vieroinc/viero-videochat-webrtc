@@ -1,0 +1,17 @@
+{
+  "name": "@viero/videochat-webrtc",
+  "version": "1.1.0",
+  "description": "Viero's multi participant WebRTC (peer-to-peer) based video chat library.",
+  "main": "index.js",
+  "contributors": [
+    {
+      "name": "Zoltan Gobolos",
+      "email": "zoltan.gobolos@viero.tv"
+    }
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "@viero/common": "^1.0.1",
+    "webrtc-adapter": "^7.6.1"
+  }
+}

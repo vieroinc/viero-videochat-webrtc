@@ -1,0 +1,93 @@
+<html>
+  <head>
+    <title>caller</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+      #stats {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 20px;
+        padding: 0 20px 0 20px;
+        background: yellow;
+
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: center;
+      }
+      #videos {
+        position: absolute;
+        top: 20px;
+        left: 0;
+        width: 100vw;
+        height: calc(100vh - 20px);
+
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: flex-start;
+
+        overflow-y: hidden;
+        overflow-x: scroll;
+      }
+      #videos video {
+        position: relative;
+        width: 10vw;
+        height: 10vw;
+        background: black;
+        object-fit: cover;
+      }
+      #chat-button {
+        width: 60px;
+        height: 60px;
+        position: absolute;
+        bottom: 20px;
+        right: 100px;
+        border-radius: 50%;
+        border: 0;
+        box-shadow: 0px 4px 8px 0px black;
+        color: white;
+        font-weight: bold;
+        outline: none;
+      }
+      #chat-button[value="Prepare"] {
+        background: grey;
+      }
+      #chat-button[value="Join"] {
+        background: green;
+      }
+      #chat-button[value="Hangup"] {
+        background: red;
+      }
+      #stat-button {
+        width: 60px;
+        height: 60px;
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        border-radius: 50%;
+        border: 0;
+        box-shadow: 0px 4px 8px 0px black;
+        background: grey;
+        color: white;
+        font-weight: bold;
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stats"></div>
+    <div id="videos"></div>
+    <input id="chat-button" type="button"></input>
+    <input id="stat-button" type="button" value="Stats"></input>
+    <script src="./index.bundle.js"></script>
+  </body>
+</html>
