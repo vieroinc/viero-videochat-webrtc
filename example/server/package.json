@@ -1,5 +1,5 @@
 {
-  "name": "integration-example-server",
+  "name": "example-server",
   "version": "1.0.0",
   "license": "ISC",
   "main": "index.js",
