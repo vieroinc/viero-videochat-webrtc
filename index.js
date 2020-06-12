@@ -110,9 +110,6 @@ const _onNegotiationNeeded = (participant, evt) => {
       VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.ERROR, { detail: { error } }));
     });
 };
-const _onRemoveStream = (participant, evt) => {
-  // TODO
-};
 const _onSignalingStateChange = (participant, evt) => {
   VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE, {
     detail: {
@@ -203,7 +200,6 @@ const _addParticipant = (id, dry) => {
   pc.addEventListener('iceconnectionstatechange', _onICEConnectionStateChange.bind(this, participant));
   pc.addEventListener('icegatheringstatechange', _onICEGatheringStateChange.bind(this, participant));
   pc.addEventListener('negotiationneeded', _onNegotiationNeeded.bind(this, participant));
-  pc.addEventListener('removestream', _onRemoveStream.bind(this, participant));
   pc.addEventListener('signalingstatechange', _onSignalingStateChange.bind(this, participant));
   pc.addEventListener('track', _onTrack.bind(this, participant));
   if (!dry) {
@@ -245,7 +241,7 @@ export class VieroWebRTCVideoChat extends EventTarget {
       this.hangup();
     }
 
-    if (!id || !/^([a-z0-9\-].*)$/.test(id)) {
+    if (!id || !/^[a-zA-Z0-9-_.@#=]{1,}$/.test(id)) {
       return Promise.reject(new VieroError('VieroWebRTCVideoChat', 596850));
     }
 
@@ -268,11 +264,12 @@ export class VieroWebRTCVideoChat extends EventTarget {
 
   join() {
     if (!this.localStream) {
-      throw new VieroError('VieroWebRTCVideoChat', 838369);
+      return Promise.reject(new VieroError('VieroWebRTCVideoChat', 838369));
     }
     _state = VieroWebRTCVideoChat.STATE.JOINED;
     _signaling.send({ word: 'hello', from: _id });
     this.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.STATE_DID_CHANGE, { detail: { state: _state } }));
+    return Promise.resolve();
   }
 
   hangup() {
