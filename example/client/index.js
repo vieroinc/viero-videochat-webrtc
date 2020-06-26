@@ -58,7 +58,7 @@ const leave = () => {
   }
 };
 
-const renderParticipants = (participants, container) => {
+const renderParticipants = (participants, container, muted) => {
   render(
     repeat(
       participants,
@@ -73,8 +73,8 @@ const renderParticipants = (participants, container) => {
         );
         return html`
           <div class="participant" id=${p.id}>
-            <video class="user" playsinline autoplay .srcObject=${p.userStream}></video>
-            <video class="display" playsinline autoplay .srcObject=${p.displayStream}></video>
+            <video class="user" playsinline autoplay .srcObject=${p.userStream} .muted=${!!muted}></video>
+            <video class="display" playsinline autoplay .srcObject=${p.displayStream} .muted=${!!muted}></video>
           <div>
         `;
       },
@@ -103,7 +103,7 @@ const chatStatButton = document.querySelector('#chat-stat-button');
     state.videochat.setStreamConfiguration(state.currentStreamConfiguration).then((stream) => {
       const { userStream, displayStream } = VieroWebRTCVideoChat.splitStream(stream);
       [userStream, displayStream].forEach((stream) => stream.getAudioTracks().forEach((t) => userStream.removeTrack(t)));
-      renderParticipants([{ id: state.id, userStream, displayStream }], me);
+      renderParticipants([{ id: state.id, userStream, displayStream }], me, true);
     });
   });
 });
