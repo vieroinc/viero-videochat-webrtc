@@ -24,7 +24,7 @@ export class VieroWebRTCVideoChatSocketIoSignaling extends VieroWebRTCVideoChatS
 
   constructor(channel) {
     super();
-    if (!channel || !/^([a-z0-9\-].*){4,}$/.test(channel)) {
+    if (!channel || !/^([a-zA-Z0-9\-].*){4,}$/.test(channel)) {
       throw new VieroError('VieroWebRTCVideoChatSocketIoSignaling', 975600);
     }
     this._channel = channel;
@@ -35,27 +35,33 @@ export class VieroWebRTCVideoChatSocketIoSignaling extends VieroWebRTCVideoChatS
   }
 
   connect() {
-    if (this._socket) return;
-    const baseUrl = ['127.0.0.1', 'localhost'].includes(new URL(location.href).hostname) ? 'http://127.0.0.1:8181' : 'https://signaling.vcdemo.viero.tv';
-    const admin = io(`${baseUrl}/admin`);
-    admin.on('created', () => {
-      this._socket = io(`${baseUrl}/${this._channel}`);
-      this._socket.on('signal', (payload) => {
-        if (payload) {
-          console.log('RCV', payload);
-          this.dispatchSignal(payload);
-        }
+    return new Promise((resolve) => {
+      if (this._socket) return resolve();
+      const baseUrl = ['127.0.0.1', 'localhost'].includes(new URL(location.href).hostname) ? 'http://127.0.0.1:8181' : 'https://signaling.vcdemo.viero.tv';
+      const admin = io(`${baseUrl}/admin`);
+      admin.on('created', () => {
+        this._socket = io(`${baseUrl}/${this._channel}`);
+        this._socket.on('signal', (payload) => {
+          if (payload) {
+            console.log('RCV', payload);
+            this.dispatchSignal(payload);
+          }
+        });
+        admin.disconnect();
+        resolve();
       });
-      admin.disconnect();
+      admin.emit('create', { channel: this._channel });
     });
-    admin.emit('create', { channel: this._channel });
   }
 
   disconnect() {
-    if (this._socket) {
-      this._socket.disconnect();
-      this._socket = void 0;
-    }
+    return new Promise((resolve) => {
+      if (this._socket) {
+        this._socket.disconnect();
+        this._socket = void 0;
+      }
+      resolve();
+    });
   }
 
   send(payload) {

@@ -18,19 +18,7 @@
 
 export class VieroWebRTCVideoChatSignaling extends EventTarget {
 
-  get connected() {
-    throw new Error('VieroWebRTCVideoChatSignaling().connected is not implemented!');
-  }
-
-  connect() {
-    throw new Error('VieroWebRTCVideoChatSignaling().connect() is not implemented!');
-  }
-
-  disconnect() {
-    throw new Error('VieroWebRTCVideoChatSignaling().disconnect() is not implemented!');
-  }
-
-  send() {
+  send(payload) {
     throw new Error('VieroWebRTCVideoChatSignaling().send(...) is not implemented!');
   }
 

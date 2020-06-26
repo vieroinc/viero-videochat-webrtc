@@ -27,285 +27,323 @@ const _defaultPeerConnectionConfiguration = {
   ],
 };
 
-const _defaultStreamConfiguration = {
-  media: {
-    audio: true,
-    video: true,
-  },
-  source: 'camera',
-}
+const _contentHints = {};
 
-let _sharedInstance;
-let _peerConnectionConfiguration;
-let _streamConfiguration;
+const _userSource = (video) => navigator.mediaDevices.getUserMedia({ video }).then((stream) => stream.getVideoTracks());
+const _displaySource = (video) => navigator.mediaDevices.getDisplayMedia({ video }).then((stream) => stream.getVideoTracks());
+const _audioSource = (audio) => navigator.mediaDevices.getUserMedia({ audio }).then((stream) => stream.getAudioTracks());
 
-let _id;
-let _signaling;
-
-const _participants = [];
-let _state;
-
-const _onConnectionStateChange = (participant, evt) => {
-  VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE, {
+const _onConnectionStateChange = (self, participant, pc, evt) => {
+  self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE, {
     detail: {
       id: participant.id,
       state: 'connectionState',
-      value: participant.peerConnection.connectionState,
+      value: pc.connectionState,
     }
   }));
-  if ('disconnected' === participant.peerConnection.connectionState) {
-    const idx = _participants.findIndex((p) => p.id === participant.id);
-    const deleted = _participants.splice(idx, 1)[0];
-    if (deleted.stream) {
-      deleted.stream.getTracks().forEach((track) => track.stop());
+  if ('disconnected' === pc.connectionState) {
+    if (participant.userStream) {
+      participant.userStream.getTracks().forEach((track) => track.stop());
+      participant.userStream = null;
     }
-    if (deleted.peerConnection) {
-      deleted.peerConnection.close();
+    if (participant.displayStream) {
+      participant.displayStream.getTracks().forEach((track) => track.stop());
+      participant.displayStream = null;
     }
-    VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
+    if (participant.outPeerConnection) {
+      participant.outPeerConnection.close();
+      participant.outPeerConnection = null;
+    }
+    if (participant.inPeerConnection) {
+      participant.inPeerConnection.close();
+      participant.inPeerConnection = null;
+    }
+    delete self._._participants[participant.id];
+    self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
   }
 };
-const _onICECandidate = (participant, evt) => {
+
+const _onICECandidate = (self, participant, pc, evt) => {
   if (evt.candidate) {
-    _signaling.send({
+    self._._signaling.send({
       word: 'cdt',
       to: participant.id,
-      from: _id,
+      from: self._._id,
       data: JSON.parse(JSON.stringify(evt.candidate)),
     });
   }
 };
-const _onICEConnectionStateChange = (participant, evt) => {
-  VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE, {
+
+const _onICEConnectionStateChange = (self, participant, pc, evt) => {
+  self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE, {
     detail: {
       id: participant.id,
       state: 'iceConnectionState',
-      value: participant.peerConnection.iceConnectionState,
+      value: pc.iceConnectionState,
     }
   }));
 };
-const _onICEGatheringStateChange = (participant, evt) => {
-  VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE, {
+
+const _onICEGatheringStateChange = (self, participant, pc, evt) => {
+  self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE, {
     detail: {
       id: participant.id,
       state: 'iceGatheringState',
-      value: participant.peerConnection.iceGatheringState,
+      value: pc.iceGatheringState,
     }
   }));
 };
-const _onNegotiationNeeded = (participant, evt) => {
-  const pc = participant.peerConnection;
+
+const _onNegotiationNeeded = (self, participant, pc, evt) => {
   pc.createOffer()
     .then((offer) => pc.setLocalDescription(offer))
     .then(() => {
-      return _signaling.send({
+      return self._._signaling.send({
         word: 'sdp',
         to: participant.id,
-        from: _id,
+        from: self._._id,
         data: JSON.parse(JSON.stringify(pc.localDescription)),
       });
     })
     .catch((err) => {
       const error = new VieroError('VieroWebRTCVideoChat', 884761, err);
-      VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.ERROR, { detail: { error } }));
+      self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.ERROR, { detail: { error } }));
     });
 };
-const _onSignalingStateChange = (participant, evt) => {
-  VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE, {
+
+const _onSignalingStateChange = (self, participant, pc, evt) => {
+  self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE, {
     detail: {
       id: participant.id,
       state: 'signalingState',
-      value: participant.peerConnection.signalingState,
+      value: pc.signalingState,
     }
   }));
 };
-const _onTrack = (participant, evt) => {
+
+const _onTrack = (self, participant, pc, evt) => {
   if (evt.streams && evt.streams.length) {
-    participant.stream = evt.streams[0];
-    VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
+    evt.streams[0].getVideoTracks().forEach((t) => t.contentHint = _contentHints[t.id]);
+    evt.streams[0].addEventListener('removetrack', (evt) => {
+      setTimeout(() => {
+        self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
+      }, 0);
+    });
+
+    Object.assign(participant, VieroWebRTCVideoChat.splitStream(evt.streams[0]));
+    self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
   }
 };
 
-const _onSignal = (evt) => {
+const _participant = (self, id) => {
+  return self._._participants[id];
+}
 
-  if (_state !== VieroWebRTCVideoChat.STATE.JOINED) {
-    return;
+const _addParticipant = (self, id) => {
+  const opc = new RTCPeerConnection(self._._peerConnectionConfiguration);
+  const ipc = new RTCPeerConnection(self._._peerConnectionConfiguration);
+  const participant = { id, outPeerConnection: opc, inPeerConnection: ipc };
+
+  [opc, ipc].forEach((pc) => {
+    pc.addEventListener('connectionstatechange', _onConnectionStateChange.bind(null, self, participant, pc));
+    pc.addEventListener('icecandidate', _onICECandidate.bind(null, self, participant, pc));
+    pc.addEventListener('iceconnectionstatechange', _onICEConnectionStateChange.bind(null, self, participant, pc));
+    pc.addEventListener('icegatheringstatechange', _onICEGatheringStateChange.bind(null, self, participant, pc));
+    pc.addEventListener('signalingstatechange', _onSignalingStateChange.bind(null, self, participant, pc));
+  });
+  [ipc].forEach((pc) => {
+    pc.addEventListener('track', _onTrack.bind(null, self, participant, pc));
+  });
+  self._._participants[id] = participant;
+  return participant;
+};
+
+const _addStreamToParticipant = (self, participant) => {
+  const opc = participant.outPeerConnection;
+  const senders = opc.getSenders();
+  if (senders.length) {
+    senders.forEach((sender) => opc.removeTrack(sender));
   }
+  self._._stream.getTracks().forEach((track) => {
+    opc.addTrack(track, self._._stream);
+  });
+  _onNegotiationNeeded(self, participant, participant.outPeerConnection);
+};
 
-  if (evt.detail.to && evt.detail.to !== _id) {
+const _emitContentHint = (self) => {
+  self._._signaling.send({
+    word: 'contenthint',
+    from: self._._id,
+    data: self._._stream.getVideoTracks().reduce((acc, t) => {
+      acc[t.id] = t.contentHint;
+      return acc;
+    }, {}),
+  });
+}
+
+const _onSignal = (self, evt) => {
+  if (
+    (evt.detail.to && evt.detail.to !== self._._id)
+    || (evt.detail.from && evt.detail.from === self._._id)
+  ) {
     return;
   }
 
   switch (evt.detail.word) {
     case 'hello': {
-      if (_me().id === evt.detail.from) {
-        return;
-      }
-      return _addParticipant(evt.detail.from);
+      const participant = _addParticipant(self, evt.detail.from);
+      _emitContentHint(self);
+      return _addStreamToParticipant(self, participant);
+    }
+    case 'contenthint': {
+      return Object.assign(_contentHints, evt.detail.data);
     }
     case 'sdp': {
       const sdp = new RTCSessionDescription(evt.detail.data);
-      let participant = _participant(evt.detail.from);
+      let participant = _participant(self, evt.detail.from);
       if (!participant) {
-        participant = _addParticipant(evt.detail.from, true);
+        participant = _addParticipant(self, evt.detail.from);
+        _emitContentHint(self);
+        _addStreamToParticipant(self, participant);
       }
-      const pc = participant.peerConnection;
-      return pc.setRemoteDescription(sdp).then(() => {
-        if ('offer' !== sdp.type) return;
-        const stream = VieroWebRTCVideoChat.sharedInstance.localStream;
-        stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-        return pc.createAnswer()
-          .then((answer) => pc.setLocalDescription(answer))
-          .then(() => _signaling.send({
-            word: 'sdp',
-            to: participant.id,
-            from: _id,
-            data: JSON.parse(JSON.stringify(pc.localDescription)),
-          }));
-      }).catch((err) => {
-        const error = new VieroError('VieroWebRTCVideoChat', 352177, err);
-        VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.ERROR, { detail: { error } }));
-      });
+      switch (sdp.type) {
+        case 'offer': {
+          // received an offer, answer it
+          const ipc = participant.inPeerConnection;
+          return ipc.setRemoteDescription(sdp).then(() => {
+            return ipc.createAnswer()
+              .then((answer) => ipc.setLocalDescription(answer))
+              .then(() => self._._signaling.send({
+                word: 'sdp',
+                to: participant.id,
+                from: self._._id,
+                data: JSON.parse(JSON.stringify(ipc.localDescription)),
+              }));
+          }).catch((err) => {
+            const error = new VieroError('VieroWebRTCVideoChat', 352177, err);
+            self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.ERROR, { detail: { error } }));
+          });
+        }
+        case 'answer': {
+          // received an answer
+          return participant.outPeerConnection.setRemoteDescription(sdp).catch((err) => {
+            const error = new VieroError('VieroWebRTCVideoChat', 645167, err);
+            self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.ERROR, { detail: { error } }));
+          });
+        }
+        default: return;
+      }
     }
     case 'cdt': {
       const cdt = new RTCIceCandidate(evt.detail.data);
-      const participant = _participant(evt.detail.from);
-      return participant.peerConnection.addIceCandidate(cdt).catch((err) => {
+      const participant = _participant(self, evt.detail.from);
+      return participant.outPeerConnection.addIceCandidate(cdt).catch((err) => {
         const error = new VieroError('VieroWebRTCVideoChat', 518450, err);
-        VieroWebRTCVideoChat.sharedInstance.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.ERROR, { detail: { error } }));
-      });
+        self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.ERROR, { detail: { error } }));
+      })
+
     }
   }
-};
-
-const _ensureLocalStream = () => {
-  const op = 'screen' === _streamConfiguration.source ? 'getDisplayMedia' : 'getUserMedia';
-  return navigator.mediaDevices[op](_streamConfiguration.media);
-};
-
-const _participant = (id) => {
-  return _participants.find((p) => p.id === id);
-};
-
-const _me = () => {
-  return _participant(_id);
-};
-
-const _addParticipant = (id, dry) => {
-  const pc = new RTCPeerConnection(_peerConnectionConfiguration);
-  const participant = { id, peerConnection: pc };
-  _participants.push(participant);
-  pc.addEventListener('connectionstatechange', _onConnectionStateChange.bind(this, participant));
-  pc.addEventListener('icecandidate', _onICECandidate.bind(this, participant));
-  pc.addEventListener('iceconnectionstatechange', _onICEConnectionStateChange.bind(this, participant));
-  pc.addEventListener('icegatheringstatechange', _onICEGatheringStateChange.bind(this, participant));
-  pc.addEventListener('negotiationneeded', _onNegotiationNeeded.bind(this, participant));
-  pc.addEventListener('signalingstatechange', _onSignalingStateChange.bind(this, participant));
-  pc.addEventListener('track', _onTrack.bind(this, participant));
-  if (!dry) {
-    const stream = VieroWebRTCVideoChat.sharedInstance.localStream;
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-  }
-  return participant;
 };
 
 export class VieroWebRTCVideoChat extends EventTarget {
 
-  static get sharedInstance() {
-    if (!_sharedInstance) {
-      _sharedInstance = new VieroWebRTCVideoChat();
-    }
-    return _sharedInstance;
+  static availableSources() {
+    return navigator.mediaDevices.enumerateDevices()
+      .then((devices) => devices.reduce((acc, device) => {
+        acc[device.groupId] = acc[device.groupId] || {};
+        acc[device.groupId][device.deviceId] = {
+          kind: device.kind,
+          label: device.label,
+        };
+        return acc;
+      }, {}));
   }
 
-  get state() {
-    return _state;
+  static splitStream(stream) {
+    const motion = stream.getVideoTracks().filter((t) => t.contentHint === 'motion');
+    const detail = stream.getVideoTracks().filter((t) => t.contentHint === 'detail');
+    const audio = stream.getAudioTracks();
+    return {
+      userStream: new MediaStream([...motion, ...audio]),
+      displayStream: new MediaStream([...detail]),
+    };
   }
 
-  get participants() {
-    return _participants.map((p) => ({ id: p.id, stream: p.stream }));
-  }
+  constructor(id, peerConnectionConfiguration) {
+    super();
 
-  get localStream() {
-    return (_me() || {}).stream;
-  }
-
-  configure(configuration) {
-    configuration = configuration || {};
-    _peerConnectionConfiguration = configuration.peerConnectionConfiguration || _defaultPeerConnectionConfiguration;
-    _streamConfiguration = configuration.streamConfiguration || _defaultStreamConfiguration;
-  }
-
-  prepare(signaling, id) {
-    if (VieroWebRTCVideoChat.STATE.UNPREPARED !== _state) {
-      this.hangup();
-    }
+    window.wrtcpc = this;
 
     if (!id || !/^[a-zA-Z0-9-_.@#=]{1,}$/.test(id)) {
       return Promise.reject(new VieroError('VieroWebRTCVideoChat', 596850));
     }
 
-    _id = id;
+    this._ = {
+      _id: id,
+      _peerConnectionConfiguration: peerConnectionConfiguration || _defaultPeerConnectionConfiguration,
+      _participants: [],
+      _onSignalProxy: _onSignal.bind(null, this),
+      _stream: new MediaStream([]),
+    };
+  }
 
-    _signaling = signaling;
-    _signaling.addEventListener(VieroWebRTCVideoChatSignaling.EVENT.SIGNAL, _onSignal.bind(this));
-    _signaling.connect();
+  get participants() {
+    return Object.values(this._._participants)
+      .map((p) => ({ id: p.id, userStream: p.userStream, displayStream: p.displayStream }));
+  }
 
-    return _ensureLocalStream().then((stream) => {
-      _participants.push({ id, stream });
-      _state = VieroWebRTCVideoChat.STATE.PREPARED;
-      this.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
-      this.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.STATE_DID_CHANGE, { detail: { state: _state } }));
-    }).catch((err) => {
-      this.hangup();
-      return Promise.reject(new VieroError('VieroWebRTCVideoChat', 463108, err));
+  setSignaling(signaling) {
+    return new Promise((resolve) => {
+      if (this._._signaling) {
+        this._._signaling.removeEventListener(VieroWebRTCVideoChatSignaling.EVENT.SIGNAL, this._._onSignalProxy);
+        Object.values(this._._participants).forEach((participant) => {
+          if (participant.userStream) {
+            participant.userStream.getTracks().forEach((t) => t.stop());
+          }
+          if (participant.displayStream) {
+            participant.displayStream.getTracks().forEach((t) => t.stop());
+          }
+          participant.outPeerConnection.close();
+          participant.inPeerConnection.close();
+          delete this._._participants[participant.id];
+        });
+        self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
+      }
+      this._._signaling = signaling;
+      if (this._._signaling) {
+        this._._signaling.addEventListener(VieroWebRTCVideoChatSignaling.EVENT.SIGNAL, this._._onSignalProxy);
+        this._._signaling.send({ word: 'hello', from: this._._id });
+      }
+      resolve();
     });
   }
 
-  join() {
-    if (!this.localStream) {
-      return Promise.reject(new VieroError('VieroWebRTCVideoChat', 838369));
-    }
-    _state = VieroWebRTCVideoChat.STATE.JOINED;
-    _signaling.send({ word: 'hello', from: _id });
-    this.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.STATE_DID_CHANGE, { detail: { state: _state } }));
-    return Promise.resolve();
-  }
-
-  hangup() {
-    _state = VieroWebRTCVideoChat.STATE.UNPREPARED;
-    if (_signaling) {
-      _signaling.disconnect();
-      _signaling = void 0;
-    }
-    _id = void 0;
-    if (_participants.length) {
-      _participants.forEach((p) => {
-        if (p.stream) {
-          p.stream.getTracks().forEach((track) => track.stop());
+  setStreamConfiguration(configuration) {
+    return Promise.all([['user', _userSource], ['display', _displaySource], ['audio', _audioSource]].map((def) => {
+      if (!!configuration[def[0]]) return def[1](configuration[def[0]]);
+      return Promise.resolve([]);
+    }))
+      .then(([uTracks, dTracks, aTracks]) => {
+        uTracks.forEach((t) => t.contentHint = 'motion');
+        dTracks.forEach((t) => t.contentHint = 'detail');
+        return new MediaStream([...uTracks, ...dTracks, ...aTracks]);
+      })
+      .then((stream) => {
+        const previous = this._._stream;
+        this._._stream = stream;
+        if (this._._signaling) {
+          _emitContentHint(this);
         }
-        if (p.peerConnection) {
-          p.peerConnection.close();
-        }
+        Object.values(this._._participants).forEach((participant) => _addStreamToParticipant(this, participant));
+        previous.getTracks().forEach((t) => t.stop());
+        return this._._stream;
       });
-      _participants.length = 0;
-      this.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
-    }
-    this.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.STATE_DID_CHANGE, { detail: { state: _state } }));
   }
 }
 
 VieroWebRTCVideoChat.EVENT = {
-  STATE_DID_CHANGE: 'VieroWebRTCVideoChatEventStateDidChange',
   PARTICIPANTS_DID_CHANGE: 'VieroWebRTCVideoChatEventParticipantsDidChange',
   WEBRTC_STATE_DID_CHANGE: 'VieroWebRTCVideoChatEventWebRTCStateDidChange',
   ERROR: 'VieroWebRTCVideoChatEventError',
 };
-
-VieroWebRTCVideoChat.STATE = {
-  UNPREPARED: 'VieroWebRTCVideoChatStateUnprepared',
-  PREPARED: 'VieroWebRTCVideoChatStatePrepared',
-  JOINED: 'VieroWebRTCVideoChatStateJoined',
-};
-
-_state = VieroWebRTCVideoChat.STATE.UNPREPARED;

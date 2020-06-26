@@ -1,7 +1,7 @@
 {
   "name": "@viero/videochat-webrtc",
-  "version": "1.0.1",
-  "description": "A WebRTC based multi-peer video chat library.",
+  "version": "2.0.0",
+  "description": "A multi-peer WebRTC video chat library.",
   "main": "index.js",
   "contributors": [
     {
@@ -19,7 +19,7 @@
     "url": "https://github.com/vieroinc/viero-videochat-webrtc/issues"
   },
   "dependencies": {
-    "@viero/common": "^1.0.1",
+    "@viero/common": "^1.1.0",
     "webrtc-adapter": "^7.6.1"
   }
 }
