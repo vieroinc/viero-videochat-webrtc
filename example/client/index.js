@@ -66,9 +66,9 @@ const renderParticipants = (participants, container, muted) => {
       (p) => {
         console.log(
           'Rendering',
-          p.userStream.getTracks().map((t) => `${t.kind}:${t.id}`),
+          p.userStream.getTracks().map((t) => `${t.kind}:${t.contentHint}:${t.id}`),
           'in USER and',
-          p.displayStream.getTracks().map((t) => `${t.kind}:${t.id}`),
+          p.displayStream.getTracks().map((t) => `${t.kind}:${t.contentHint}:${t.id}`),
           'in DISPLAY',
         );
         return html`
