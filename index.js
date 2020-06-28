@@ -50,6 +50,10 @@ const _onConnectionStateChange = (self, participant, pc, evt) => {
       participant.displayStream.getTracks().forEach((track) => track.stop());
       participant.displayStream = null;
     }
+    if (participant.incomingStream) {
+      participant.incomingStream.getTracks().forEach((track) => track.stop());
+      participant.incomingStream = null;
+    }
     if (participant.outPeerConnection) {
       participant.outPeerConnection.close();
       participant.outPeerConnection = null;
@@ -123,15 +127,23 @@ const _onSignalingStateChange = (self, participant, pc, evt) => {
 
 const _onTrack = (self, participant, pc, evt) => {
   if (evt.streams && evt.streams.length) {
-    evt.streams[0].getVideoTracks().forEach((t) => t.contentHint = _contentHints[t.id]);
-    evt.streams[0].addEventListener('removetrack', (evt) => {
+    participant.incomingStream = evt.streams[0];
+    participant.incomingStream.addEventListener('removetrack', (evt) => {
       setTimeout(() => {
         self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
       }, 0);
     });
-
-    Object.assign(participant, VieroWebRTCVideoChat.splitStream(evt.streams[0]));
-    self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
+    const videoTrackIds = participant.incomingStream.getVideoTracks().map((t) => t.id);
+    if (videoTrackIds.length) {
+      self._._signaling.send({
+        word: 'needcontenthint',
+        from: self._._id,
+        to: participant.id,
+        data: videoTrackIds,
+      });
+    } else {
+      _applyContentHint(self, participant);
+    }
   }
 };
 
@@ -140,6 +152,9 @@ const _participant = (self, id) => {
 }
 
 const _addParticipant = (self, id) => {
+  if (self._._participants[id]) {
+    return self._._participants[id];
+  }
   const opc = new RTCPeerConnection(self._._peerConnectionConfiguration);
   const ipc = new RTCPeerConnection(self._._peerConnectionConfiguration);
   const participant = { id, outPeerConnection: opc, inPeerConnection: ipc };
@@ -170,16 +185,18 @@ const _addStreamToParticipant = (self, participant) => {
   _onNegotiationNeeded(self, participant, participant.outPeerConnection);
 };
 
-const _emitContentHint = (self) => {
-  self._._signaling.send({
-    word: 'contenthint',
-    from: self._._id,
-    data: self._._stream.getVideoTracks().reduce((acc, t) => {
-      acc[t.id] = t.contentHint;
-      return acc;
-    }, {}),
-  });
-}
+const _applyContentHint = (self, participant, contentHint) => {
+  if (contentHint) {
+    Object.keys(contentHint).forEach((id) => {
+      const track = participant.incomingStream.getTrackById(id);
+      if (track) {
+        track.contentHint = contentHint[id];
+      }
+    });
+  }
+  Object.assign(participant, VieroWebRTCVideoChat.splitStream(participant.incomingStream));
+  self.dispatchEvent(new CustomEvent(VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE));
+};
 
 const _onSignal = (self, evt) => {
   if (
@@ -192,18 +209,31 @@ const _onSignal = (self, evt) => {
   switch (evt.detail.word) {
     case 'hello': {
       const participant = _addParticipant(self, evt.detail.from);
-      _emitContentHint(self);
       return _addStreamToParticipant(self, participant);
     }
+    case 'needcontenthint': {
+      return self._._signaling.send({
+        word: 'contenthint',
+        from: self._._id,
+        to: evt.detail.from,
+        data: evt.detail.data.reduce((acc, id) => {
+          const track = self._._stream.getTrackById(id);
+          if (track) {
+            acc[id] = track.contentHint;
+          }
+          return acc;
+        }, {}),
+      });
+    }
     case 'contenthint': {
-      return Object.assign(_contentHints, evt.detail.data);
+      const participant = _participant(self, evt.detail.from);
+      return _applyContentHint(self, participant, evt.detail.data);
     }
     case 'sdp': {
       const sdp = new RTCSessionDescription(evt.detail.data);
       let participant = _participant(self, evt.detail.from);
       if (!participant) {
         participant = _addParticipant(self, evt.detail.from);
-        _emitContentHint(self);
         _addStreamToParticipant(self, participant);
       }
       switch (sdp.type) {
@@ -304,6 +334,9 @@ export class VieroWebRTCVideoChat extends EventTarget {
           if (participant.displayStream) {
             participant.displayStream.getTracks().forEach((t) => t.stop());
           }
+          if (participant.incomingStream) {
+            participant.incomingStream.getTracks().forEach((t) => t.stop());
+          }
           participant.outPeerConnection.close();
           participant.inPeerConnection.close();
           delete this._._participants[participant.id];
@@ -332,9 +365,6 @@ export class VieroWebRTCVideoChat extends EventTarget {
       .then((stream) => {
         const previous = this._._stream;
         this._._stream = stream;
-        if (this._._signaling) {
-          _emitContentHint(this);
-        }
         Object.values(this._._participants).forEach((participant) => _addStreamToParticipant(this, participant));
         previous.getTracks().forEach((t) => t.stop());
         return this._._stream;
