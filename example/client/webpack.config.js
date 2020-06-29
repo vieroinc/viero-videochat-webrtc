@@ -6,7 +6,8 @@ const webpack = require("webpack");
 module.exports = {
   mode: 'development',
   entry: {
-    "index": path.resolve(__dirname, "index.js"),
+    "multicfg/index": path.resolve(__dirname, "./multicfg/index.js"),
+    "simple/index": path.resolve(__dirname, "./simple/index.js"),
   },
   output: {
     path: path.resolve(__dirname, ""),

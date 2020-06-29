@@ -20,9 +20,9 @@ import { html, render } from 'lit-html';
 import { repeat } from 'lit-html/directives/repeat';
 import { VieroUID } from '@viero/common/uid';
 
-import { VieroWebRTCVideoChat } from "../..";
-import { VieroWebRTCVideoChatSignaling } from "../../signaling";
-import { VieroWebRTCVideoChatSocketIoSignaling } from "./signaling.socketio";
+import { VieroWebRTCVideoChat } from "../../..";
+import { VieroWebRTCVideoChatSignaling } from "../../../signaling";
+import { VieroWebRTCVideoChatSocketIoSignaling } from "../signaling.socketio";
 
 const urlObj = new URL(location.href);
 const channel = urlObj.searchParams.get('channel');
@@ -208,6 +208,9 @@ const chatStatButton = document.querySelector('#chat-stat-button');
     createStreams[idx]().then((struct) => {
       const muxed = state.videochat.setStreams(struct.streams);
       state.currentStreamStruct = struct;
+      state.streams[state.id] = {
+        streamId: { cameraStream, screenStream }
+      };
       renderParticipants([{ id: state.id, stream: muxed }], me, true);
     });
   });
