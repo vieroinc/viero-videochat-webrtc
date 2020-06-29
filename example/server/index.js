@@ -36,7 +36,11 @@ io.of('/admin').on('connection', (socket) => {
     channel.on('connection', (socket) => {
       socket.on('signal', (payload) => {
         console.log('REC', name, payload);
-        socket.broadcast.emit('signal', payload);
+        if (payload.includeMe) {
+          channel.emit('signal', payload);
+        } else {
+          socket.broadcast.emit('signal', payload);
+        }
       });
     });
     socket.emit('created');

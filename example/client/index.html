@@ -101,6 +101,10 @@
       input[type="button"]:not(:first-child) {
         margin: 0 0 0 5px;
       }
+      input[disabled] {
+        opacity: 0.5;
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
@@ -109,16 +113,17 @@
     <div id="participants"></div>
     <div id="chat-buttons">
       <input id="chat-join-button" type="button" value="JOIN"></input>
-      <input id="chat-leave-button" type="button" value="LEAVE"></input>
+      <input id="chat-leave-button" type="button" value="LEAVE" disabled></input>
       <input id="chat-stat-button" type="button" value="STATS"></input>
     </div>
     <div id="cfg-buttons">
-      <input id="chat-cfg0-button" type="button" value="CM"></input>
-      <input id="chat-cfg1-button" type="button" value="C"></input>
-      <input id="chat-cfg2-button" type="button" value="M"></input>
-      <input id="chat-cfg3-button" type="button" value="SM"></input>
-      <input id="chat-cfg4-button" type="button" value="CSM"></input>
-      <input id="chat-cfg5-button" type="button" value="NONE"></input>
+      <input id="chat-cfg0-button" type="button" class="user" value="U(VA)"></input>
+      <input id="chat-cfg1-button" type="button" class="user" value="U(V)"></input>
+      <input id="chat-cfg2-button" type="button" class="user" value="U(A)"></input>
+      <input id="chat-cfg3-button" type="button" class="user display" value="U(A)D"></input>
+      <input id="chat-cfg4-button" type="button" class="display" value="D"></input>
+      <input id="chat-cfg5-button" type="button" class="user display" value="U(VA)D"></input>
+      <input id="chat-cfg6-button" type="button" value="NONE"></input>
     </div>
     <script src="./index.bundle.js"></script>
   </body>
