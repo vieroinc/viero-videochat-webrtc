@@ -16,9 +16,8 @@
 
 'use-strict'
 
-import { html, render } from 'lit-html';
-import { repeat } from 'lit-html/directives/repeat';
-import { VieroUID } from '@viero/common/uid';
+import { VieroUID as uid } from '@viero/common/uid';
+import { VieroWebDocumentUtils as wdu } from '@viero/common/web/document/utils';
 
 import { VieroWebRTCVideoChat } from "../../..";
 import { VieroWebRTCVideoChatSocketIoSignaling } from "../signaling.socketio";
@@ -26,20 +25,19 @@ import { VieroWebRTCVideoChatSocketIoSignaling } from "../signaling.socketio";
 const urlObj = new URL(location.href);
 const channel = urlObj.searchParams.get('channel');
 if (!channel) {
-  urlObj.searchParams.set('channel', VieroUID.short());
+  urlObj.searchParams.set('channel', uid.short());
   location.href = urlObj.toString();
 }
 
+const state = window.vierochat = {};
 const me = document.querySelector('#me');
 const participants = document.querySelector('#participants');
 const chatJoinButton = document.querySelector('#chat-join-button');
 const chatLeaveButton = document.querySelector('#chat-leave-button');
 
-const state = window.vierochat = {};
-
-const join = () => {
+chatJoinButton.addEventListener('click', () => {
   if (!VieroWebRTCVideoChat.canCreateUserStream()) {
-    return alert('Your browser is missing the required technology!');
+    return alert('Your browser is missing the required technology for WebRTC!');
   }
   chatJoinButton.setAttribute('disabled', '');
   chatLeaveButton.removeAttribute('disabled');
@@ -48,44 +46,40 @@ const join = () => {
     state.videochat.setSignaling(state.signaling);
     VieroWebRTCVideoChat.createUserStream({ video: true, audio: true })
       .then((stream) => state.videochat.setStreams([stream]))
-      .then((stream) => renderParticipants([{ id: state.id, stream }], me, true));
+      .then((stream) => wdu.createElement('video', { attributes: { playsinline: '', autoplay: '' }, properties: { srcObject: stream, muted: true }, container: me }));
   });
-};
+});
 
-const leave = () => {
+chatLeaveButton.addEventListener('click', () => {
   chatJoinButton.removeAttribute('disabled');
   chatLeaveButton.setAttribute('disabled', '');
   if (state.signaling) {
     state.signaling.disconnect();
   }
-};
+});
 
-const renderParticipants = (participants, container, muted) => {
-  render(
-    repeat(
-      participants,
-      (p) => p.id,
-      (p) => {
-        console.log(`*** rendering ${p.id} > `, p.stream.getTracks().map((t) => `${t.kind}:${t.contentHint}:${t.id}`));
-        return html`<video class="participant" playsinline autoplay .srcObject=${p.stream} .muted=${!!muted}></video>`;
-      },
-    ),
-    container,
-  );
-};
-
-chatJoinButton.addEventListener('click', () => join());
-chatLeaveButton.addEventListener('click', () => leave());
-
-state.id = VieroUID.short();
+state.id = uid.short();
 state.videochat = new VieroWebRTCVideoChat(state.id);
-state.videochat.addEventListener(
-  VieroWebRTCVideoChat.EVENT.WEBRTC_STATE_DID_CHANGE,
-  (evt) => console.log(`WEBRTCSTATE ${evt.detail.state} CHANGED TO ${evt.detail.value} ON ${evt.detail.id}`),
-);
-state.videochat.addEventListener(
-  VieroWebRTCVideoChat.EVENT.PARTICIPANTS_DID_CHANGE,
-  () => {
-    renderParticipants(state.videochat.participants, participants);
-  }
-);
+state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.WEBRTC.STATE_DID_CHANGE, (evt) => {
+  console.log(`*** EVT: WEBRTC(${evt.detail.direction}).STATE_DID_CHANGE`, evt.detail.state, 'CHANGED TO', evt.detail.value, 'ON', evt.detail.id)
+});
+state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.PARTICIPANT.DID_ADD, (evt) => {
+  console.log('*** EVT: PARTICIPANT.DID_ADD', evt.detail.participant.id);
+  wdu.createElement('video', { attributes: { id: `participant-${evt.detail.participant.id}`, playsinline: '', autoplay: '' }, container: participants });
+});
+state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.PARTICIPANT.DID_REMOVE, (evt) => {
+  console.log('*** EVT: PARTICIPANT.DID_REMOVE', evt.detail.participant.id);
+  document.querySelector(`#participant-${evt.detail.participant.id}`).remove();
+});
+state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.PARTICIPANT.DID_REMOVE_ALL, (evt) => {
+  console.log('*** EVT: PARTICIPANT.DID_REMOVE_ALL');
+  participants.innerHTML = '';
+});
+state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.TRACK.DID_ADD, (evt) => {
+  console.log('*** EVT: TRACK.DID_ADD', evt.detail.participant.id);
+  document.querySelector(`#participant-${evt.detail.participant.id}`).srcObject = evt.detail.participant.stream;
+});
+state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.TRACK.DID_REMOVE, (evt) => {
+  console.log('*** EVT: TRACK.DID_REMOVE', evt.detail.participant.id);
+  document.querySelector(`#participant-${evt.detail.participant.id}`).srcObject = evt.detail.participant.stream;
+});

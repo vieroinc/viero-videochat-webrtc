@@ -16,8 +16,6 @@
 
 'use-strict'
 
-import { html, render } from 'lit-html';
-import { repeat } from 'lit-html/directives/repeat';
 import { VieroUID } from '@viero/common/uid';
 
 import { VieroWebRTCVideoChat } from "../../..";
