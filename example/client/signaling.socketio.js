@@ -43,7 +43,7 @@ export class VieroWebRTCVideoChatSocketIoSignaling extends VieroWebRTCVideoChatS
         this._socket = io(`${baseUrl}/${this._channel}`);
         this._socket.on('signal', (payload) => {
           if (payload) {
-            console.log('RCV', payload);
+            console.log('SIGNALING - RCV', payload);
             this.dispatchSignal(payload);
           }
         });
@@ -66,7 +66,7 @@ export class VieroWebRTCVideoChatSocketIoSignaling extends VieroWebRTCVideoChatS
 
   send(payload) {
     if (this._socket) {
-      console.log('SND', payload);
+      console.log('SIGNALING - SND', payload);
       this._socket.emit('signal', payload);
     }
   }

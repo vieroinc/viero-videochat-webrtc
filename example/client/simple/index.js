@@ -61,25 +61,25 @@ chatLeaveButton.addEventListener('click', () => {
 state.id = uid.short();
 state.videochat = new VieroWebRTCVideoChat(state.id);
 state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.WEBRTC.STATE_DID_CHANGE, (evt) => {
-  console.log(`*** EVT: WEBRTC(${evt.detail.direction}).STATE_DID_CHANGE`, evt.detail.state, 'CHANGED TO', evt.detail.value, 'ON', evt.detail.id)
+  console.log(`SIMPLE - EVT: WEBRTC(${evt.detail.direction}).STATE_DID_CHANGE`, evt.detail.state, 'CHANGED TO', evt.detail.value, 'ON', evt.detail.id)
 });
 state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.PARTICIPANT.DID_ADD, (evt) => {
-  console.log('*** EVT: PARTICIPANT.DID_ADD', evt.detail.participant.id);
+  console.log('SIMPLE - EVT: PARTICIPANT.DID_ADD', evt.detail.participant.id);
   wdu.createElement('video', { attributes: { id: `participant-${evt.detail.participant.id}`, playsinline: '', autoplay: '' }, container: participants });
 });
 state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.PARTICIPANT.DID_REMOVE, (evt) => {
-  console.log('*** EVT: PARTICIPANT.DID_REMOVE', evt.detail.participant.id);
+  console.log('SIMPLE - EVT: PARTICIPANT.DID_REMOVE', evt.detail.participant.id);
   document.querySelector(`#participant-${evt.detail.participant.id}`).remove();
 });
 state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.PARTICIPANT.DID_REMOVE_ALL, (evt) => {
-  console.log('*** EVT: PARTICIPANT.DID_REMOVE_ALL');
+  console.log('SIMPLE - EVT: PARTICIPANT.DID_REMOVE_ALL');
   participants.innerHTML = '';
 });
 state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.TRACK.DID_ADD, (evt) => {
-  console.log('*** EVT: TRACK.DID_ADD', evt.detail.participant.id);
+  console.log('SIMPLE - EVT: TRACK.DID_ADD', evt.detail.participant.id);
   document.querySelector(`#participant-${evt.detail.participant.id}`).srcObject = evt.detail.participant.stream;
 });
 state.videochat.addEventListener(VieroWebRTCVideoChat.EVENT.TRACK.DID_REMOVE, (evt) => {
-  console.log('*** EVT: TRACK.DID_REMOVE', evt.detail.participant.id);
+  console.log('SIMPLE - EVT: TRACK.DID_REMOVE', evt.detail.participant.id);
   document.querySelector(`#participant-${evt.detail.participant.id}`).srcObject = evt.detail.participant.stream;
 });
