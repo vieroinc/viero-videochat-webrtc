@@ -16,7 +16,7 @@
 
 'use-strict'
 
-const io = require('socket.io')(8181, { serveClient: false, origins: ['client.vcdemo.viero.tv:*', '127.0.0.1:*'] });
+const io = require('socket.io')(8181, { serveClient: false, origins: ['client.vcdemo.viero.tv:*', 'localhost:*', '127.0.0.1:*'] });
 
 const namespaces = {};
 

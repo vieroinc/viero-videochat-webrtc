@@ -1,6 +1,6 @@
 {
   "name": "@viero/videochat-webrtc",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A multi-peer WebRTC video chat library.",
   "main": "index.js",
   "contributors": [
