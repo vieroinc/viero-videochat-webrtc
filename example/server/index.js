@@ -35,7 +35,7 @@ io.of('/admin').on('connection', (socket) => {
 
     channel.on('connection', (socket) => {
       socket.on('signal', (payload) => {
-        console.log('REC', name, payload);
+        console.log('REC @', new Date(), name, payload);
         if (payload.includeMe) {
           channel.emit('signal', payload);
         } else {
