@@ -1,3 +1,6 @@
 .DS_Store
 node_modules
-*.bundle.js
+index.bundle.js
+index.bundle.js.map
+/p2p
+/sfu

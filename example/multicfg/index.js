@@ -16,7 +16,7 @@
 
 'use-strict'
 
-import { VieroUID } from '@viero/common/uid';
+import { VieroUID } from '../../../viero-common/uid';
 
 import { VieroWebRTCVideoChat } from "../../..";
 import { VieroWebRTCVideoChatSignaling } from "../../../signaling";

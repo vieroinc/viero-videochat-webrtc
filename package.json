@@ -1,8 +1,8 @@
 {
-  "name": "@viero/videochat-webrtc",
-  "version": "2.0.1",
-  "description": "A multi-peer WebRTC video chat library.",
-  "main": "index.js",
+  "name": "@viero/webrtc-client",
+  "version": "1.0.0",
+  "description": "WebRTC client library by @vieroinc.",
+  "homepage": "https://github.com/vieroinc/viero-webrtc-client",
   "contributors": [
     {
       "name": "Zoltan Gobolos",
@@ -10,16 +10,34 @@
     }
   ],
   "license": "ISC",
-  "homepage": "https://github.com/vieroinc/viero-videochat-webrtc",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vieroinc/viero-videochat-webrtc.git"
+    "url": "git+https://github.com/vieroinc/viero-webrtc-client.git"
   },
   "bugs": {
-    "url": "https://github.com/vieroinc/viero-videochat-webrtc/issues"
+    "url": "https://github.com/vieroinc/viero-webrtc-client/issues"
+  },
+  "scripts": {
+    "clean": "rm -rf p2p sfu",
+    "reset": "rm -rf p2p sfu node_modules",
+    "babel": "babel src -d . --source-maps inline",
+    "prepublishOnly": "babel src -d . --source-maps inline"
+  },
+  "babel": {
+    "presets": [
+      "@babel/preset-env"
+    ]
   },
   "dependencies": {
-    "@viero/common": "^1.2.1",
+    "@viero/common": "^1.4.4",
+    "@viero/webrtc-common": "^1.0.2",
+    "@viero/webrtc-signaling-client": "^1.1.2",
+    "@viero/webrtc-signaling-common": "^1.0.3",
     "webrtc-adapter": "^7.6.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.10.4",
+    "@babel/core": "^7.10.4",
+    "@babel/preset-env": "^7.10.4"
   }
 }

@@ -16,10 +16,11 @@
 
 'use-strict'
 
+/*
 import adapter from 'webrtc-adapter';
 
 import { VieroWebRTCVideoChatSignaling } from "./signaling";
-import { VieroError } from '@viero/common/error';
+import { VieroError } from '../viero-common/error';
 
 const _defaultPeerConnectionConfiguration = {
   iceServers: [
@@ -336,3 +337,5 @@ VieroWebRTCVideoChat.EVENT = {
   },
   ERROR: 'VieroWebRTCVideoChatEventError',
 };
+
+*/

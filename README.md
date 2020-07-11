@@ -1,3 +1,5 @@
-# @viero/videochat-webrtc
+# @viero/webrtc-client
 
-A multi-peer WebRTC video chat library.
+WebRTC client library by @vieroinc.
+
+WORK-IN-PROGRESS!
