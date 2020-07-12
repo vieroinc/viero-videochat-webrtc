@@ -54,10 +54,10 @@ chatJoinButton.addEventListener('click', () => {
 chatLeaveButton.addEventListener('click', () => {
   chatJoinButton.removeAttribute('disabled');
   chatLeaveButton.setAttribute('disabled', '');
-  if (state.signaling) {
-    state.signaling.disconnect();
-    peers.innerHTML = '';
-  }
+  state.videochat.leave();
+  peers.innerHTML = '';
+  state.videochat.setStreams([]);
+  me.innerHTML = '';
 });
 
 const idBy = (socketId) => {

@@ -30,44 +30,41 @@ const _defaultPeerConnectionConfiguration = {
   ],
 };
 
-// DONE
+const _socketId = (self) => {
+  if (self._.signaling && self._.signaling._socket && self._.signaling._socket.id) {
+    return self._.signaling._socket.id;
+  }
+  return null;
+};
+
 const _onConnectionStateChange = (self, peer, evt) => {
+  const value = evt.currentTarget.connectionState;
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.WEBRTC.STATE_DID_CHANGE, {
     detail: {
       direction: !!peer ? 'in' : 'out',
-      id: !!peer ? peer.socketId : self._.signaling._socket.id,
+      id: !!peer ? peer.socketId : _socketId(self),
       state: 'connectionState',
-      value: !!peer ? peer.ipc.connectionState : self._.opc.connectionState,
+      value,
     }
   }));
-  if (!peer) {
-    return
-  }
-  if ('disconnected' === peer.ipc.connectionState) {
-    debugger;
-    /*
-    if (participant.stream) {
-      participant.stream.getTracks().forEach((track) => track.stop());
-      participant.stream = null;
+  if ('disconnected' === value) {
+    if (!!peer) {
+      // the peer's ipc disconnected
+      // 1. we need to check whether signaling is still on
+      // 2. if not, we must leave
+      // 3. if it is, we need to ask the server to renegotiate
+    } else {
+      // our opc is disconnected
+      // 1. we need to check whether signaling is still on
+      // 2. if not, we must leave
+      // 3. if it is, we need to renegotiate
     }
-    if (participant.outPeerConnection) {
-      participant.outPeerConnection.close();
-      participant.outPeerConnection = null;
-    }
-    if (participant.inPeerConnection) {
-      participant.inPeerConnection.close();
-      participant.inPeerConnection = null;
-    }
-    const stripped = self.participant(participant.id);
-    delete self._.participants[participant.id];
-    self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_LEAVE, { detail: { participant: stripped } }));
-    */
+  } else if ('failed' === value) {
+    // not sure how to handle this
   }
 };
 
-// DONE
 const _onICECandidate = (self, peer, evt) => {
-  // !!peer ? in stream : out stream
   if (evt.candidate) {
     self._.signaling.send({
       word: VieroWebRTCCommon.WORD.CDT,
@@ -77,31 +74,28 @@ const _onICECandidate = (self, peer, evt) => {
   }
 };
 
-// DONE
 const _onICEConnectionStateChange = (self, peer, evt) => {
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.WEBRTC.STATE_DID_CHANGE, {
     detail: {
       direction: !!peer ? 'in' : 'out',
-      id: !!peer ? peer.socketId : self._.signaling._socket.id,
+      id: !!peer ? peer.socketId : _socketId(self),
       state: 'iceConnectionState',
-      value: !!peer ? peer.ipc.iceConnectionState : self._.opc.iceConnectionState,
+      value: evt.currentTarget.iceConnectionState,
     }
   }));
 };
 
-// DONE
 const _onICEGatheringStateChange = (self, peer, evt) => {
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.WEBRTC.STATE_DID_CHANGE, {
     detail: {
       direction: !!peer ? 'in' : 'out',
-      id: !!peer ? peer.socketId : self._.signaling._socket.id,
+      id: !!peer ? peer.socketId : _socketId(self),
       state: 'iceGatheringState',
-      value: !!peer ? peer.ipc.iceGatheringState : self._.opc.iceGatheringState,
+      value: evt.currentTarget.iceGatheringState,
     }
   }));
 };
 
-// DONE
 const _onNegotiationNeeded = (self, peer, evt) => {
   const pc = peer ? peer.ipc : self._.opc;
   pc.createOffer()
@@ -120,19 +114,17 @@ const _onNegotiationNeeded = (self, peer, evt) => {
     });
 };
 
-// DONE
 const _onSignalingStateChange = (self, peer, evt) => {
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.WEBRTC.STATE_DID_CHANGE, {
     detail: {
       direction: !!peer ? 'in' : 'out',
-      id: !!peer ? peer.socketId : self._.signaling._socket.id,
+      id: !!peer ? peer.socketId : _socketId(self),
       state: 'signalingState',
-      value: !!peer ? peer.ipc.signalingState : self._.opc.signalingState,
+      value: evt.currentTarget.signalingState,
     }
   }));
 };
 
-// DONE
 const _onTrack = (self, peer, evt) => {
   if (evt.streams && evt.streams.length) {
     peer.stream = evt.streams[0];
@@ -146,10 +138,9 @@ const _onTrack = (self, peer, evt) => {
   }
 };
 
-// DONE
 const _addPeer = (self, socketId) => {
   const ipc = new RTCPeerConnection(self._._peerConnectionConfiguration);
-  const peer = { socketId, ipc };
+  const peer = { socketId, ipc, stream: new MediaStream([]) };
 
   ipc.addEventListener('connectionstatechange', _onConnectionStateChange.bind(null, self, peer));
   ipc.addEventListener('icecandidate', _onICECandidate.bind(null, self, peer));
@@ -159,16 +150,26 @@ const _addPeer = (self, socketId) => {
   ipc.addEventListener('track', _onTrack.bind(null, self, peer));
 
   self._._peers[socketId] = peer;
-  self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_ENTER, { detail: { peer: self.peer(socketId) } }));
+  self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_ENTER, { detail: { peer: _stripPeer(peer) } }));
   return peer;
 };
 
-// DONE
+const _removePeer = (self, peer) => {
+  peer.ipc.close();
+  delete self._._peers[peer.socketId];
+  self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_LEAVE, { detail: { peer: _stripPeer(peer) } }));
+}
+
 const _onEnter = (self, evt) => {
   _addPeer(self, evt.detail.socketId);
 }
 
-// DONE
+const _onLeave = (self, evt) => {
+  const peer = self._._peers[evt.detail.socketId];
+  if (!peer) return;
+  _removePeer(self, peer);
+}
+
 const _onMessage = (self, evt) => {
   const payload = evt.detail.payload;
   switch (payload.word) {
@@ -218,9 +219,7 @@ const _onMessage = (self, evt) => {
     case VieroWebRTCCommon.WORD.CDT: {
       const cdt = new RTCIceCandidate(payload.data);
       return (payload.on ? self._._peers[payload.on].ipc : self._.opc).addIceCandidate(cdt)
-        .then(() => console.log('ICE CANDIDATE ADDED'))
         .catch((err) => {
-          console.log('FAILED TO ADD ICE CANDIDATE');
           const error = new VieroError('/webrtc/sfu/client', 518450, { [VieroError.KEY.ERROR]: err, data: payload.data });
           self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.ERROR, { detail: { error } }));
         });
@@ -228,10 +227,9 @@ const _onMessage = (self, evt) => {
   }
 };
 
-
-const _onLeave = (self, evt) => {
-  debugger;
-}
+const _stripPeer = (peer) => {
+  return { socketId: peer.socketId, stream: peer.stream || new MediaStream([]) };
+};
 
 export class VieroWebRTCSFUClient extends EventTarget {
 
@@ -248,20 +246,18 @@ export class VieroWebRTCSFUClient extends EventTarget {
     };
   }
 
-  // DONE
   peer(socketId) {
-    if (this._._peers[socketId]) {
-      return { socketId, stream: this._._peers[socketId].stream || null };
+    const peer = this._._peers[socketId];
+    if (peer) {
+      return _stripPeer(peer);
     }
     return null;
   }
 
-  // DONE
   peers() {
-    return Object.values(this._._peers).map((peer) => ({ id: peer.id, stream: peer.stream }));
+    return Object.values(this._._peers).map((peer) => _stripPeer(peer));
   }
 
-  // DONE
   join(url, channel) {
     this.leave();
     const signaling = new VieroWebRTCSignalingClient(url, channel);
@@ -280,12 +276,12 @@ export class VieroWebRTCSFUClient extends EventTarget {
     });
   }
 
-  // DONE
   leave() {
     if (this._.signaling) {
       this._.signaling.removeEventListener(VieroWebRTCSignalingCommon.SIGNAL.ENTER, this._._onEnterProxy);
       this._.signaling.removeEventListener(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, this._._onMessageProxy);
       this._.signaling.removeEventListener(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, this._._onLeaveProxy);
+      this._.signaling.disconnect();
       delete this._.signaling;
     }
     if (this._.opc) {
@@ -301,7 +297,6 @@ export class VieroWebRTCSFUClient extends EventTarget {
     });
   }
 
-  // DONE
   setStreams(streams = []) {
     // 1. collect all tracks
     const tracks = streams.reduce((acc, stream) => {
@@ -337,7 +332,6 @@ export class VieroWebRTCSFUClient extends EventTarget {
     return this._.stream;
   }
 
-  // DONE
   static availableSources() {
     return navigator.mediaDevices.enumerateDevices()
       .then((devices) => devices.reduce((acc, device) => {
@@ -350,22 +344,18 @@ export class VieroWebRTCSFUClient extends EventTarget {
       }, {}));
   }
 
-  // DONE
   static canCreateUserStream() {
     return !!navigator.mediaDevices && !!navigator.mediaDevices.getUserMedia;
   }
 
-  // DONE
   static createUserStream(configuration) {
     return navigator.mediaDevices.getUserMedia(configuration);
   }
 
-  // DONE
   static canCreateDisplayStream() {
     return !!navigator.mediaDevices && !!navigator.mediaDevices.getDisplayMedia;
   }
 
-  // DONE
   static createDisplayStream(configuration) {
     return navigator.mediaDevices.getDisplayMedia(configuration);
   }
