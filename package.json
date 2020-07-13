@@ -1,6 +1,6 @@
 {
   "name": "@viero/webrtc-sfu-client",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "WebRTC client library by @vieroinc.",
   "homepage": "https://github.com/vieroinc/viero-webrtc-sfu-client",
   "contributors": [
@@ -17,6 +17,12 @@
   "bugs": {
     "url": "https://github.com/vieroinc/viero-webrtc-sfu-client/issues"
   },
+  "keywords": [
+    "webrtc",
+    "sfu",
+    "videochat"
+  ],
+  "main": "index.js",
   "scripts": {
     "clean": "rm -rf index.js",
     "reset": "rm -rf index.js node_modules",
