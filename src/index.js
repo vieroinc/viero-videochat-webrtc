@@ -20,7 +20,6 @@ import adapter from 'webrtc-adapter';
 
 import { VieroError } from '@viero/common/error';
 import { VieroWebRTCSignalingCommon } from '@viero/webrtc-signaling-common';
-import { VieroWebRTCSignalingClient } from '@viero/webrtc-signaling-client';
 import { VieroWebRTCCommon } from '@viero/webrtc-common';
 
 
@@ -258,9 +257,8 @@ export class VieroWebRTCSFUClient extends EventTarget {
     return Object.values(this._._peers).map((peer) => _stripPeer(peer));
   }
 
-  join(url, channel) {
+  join(signaling) {
     this.leave();
-    const signaling = new VieroWebRTCSignalingClient(url, channel);
     return signaling.connect().then(() => {
       signaling.addEventListener(VieroWebRTCSignalingCommon.SIGNAL.ENTER, this._._onEnterProxy);
       signaling.addEventListener(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, this._._onMessageProxy);

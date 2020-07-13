@@ -1,11 +1,43 @@
-# @viero/webrtc-client
+# @viero/webrtc-sfu-client
 
-WebRTC client library by @vieroinc.
+WebRTC SFU client library by @vieroinc.
 
-To check how viero's webrtc-sfu works either visit http://client.vcdemo.viero.tv or
-start the example code of server and client locally from npms
+To see how viero's webrtc-sfu works either visit http://client.vcdemo.viero.tv or clone the example code from [viero-webrtc-sfu-example](https://github.com/vieroinc/viero-webrtc-sfu-example) on GitHub locally.
 
-- @viero/webrtc-sfu-server
-- @viero/webrtc-sfu-client
+## How to
 
-WORK-IN-PROGRESS!
+### Install
+
+```bash
+npm install --save @viero/webrtc-signaling-client
+npm install --save @viero/webrtc-sfu-client
+```
+
+### Use
+
+```js
+import { VieroWebRTCSignalingClient } from "@viero/webrtc-signaling-client";
+import { VieroWebRTCSFUClient } from "@viero/webrtc-sfu-client";
+
+const signaling = new VieroWebRTCSignalingClient(
+  "http://localhost:8090",
+  "some-channel"
+);
+const videochat = new VieroWebRTCSFUClient();
+
+videochat
+  .join(state.signaling)
+  .then(() =>
+    VieroWebRTCSFUClient.createUserStream({ video: true, audio: true })
+  )
+  .then((stream) => state.videochat.setStreams([stream]))
+  .then((stream) => {
+    /* do something with the stream, eg:
+    VieroWindowUtils.createElement('video', {
+      attributes: { playsinline:  '', autoplay:  '' },
+      properties: { srcObject:  stream, muted:  true },
+      container:  me,
+    });
+    */
+  });
+```
