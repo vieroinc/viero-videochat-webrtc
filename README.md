@@ -26,11 +26,11 @@ const signaling = new VieroWebRTCSignalingClient(
 const videochat = new VieroWebRTCSFUClient();
 
 videochat
-  .join(state.signaling)
+  .join(signaling)
   .then(() =>
     VieroWebRTCSFUClient.createUserStream({ video: true, audio: true })
   )
-  .then((stream) => state.videochat.setStreams([stream]))
+  .then((stream) => videochat.setStreams([stream]))
   .then((stream) => {
     /* do something with the stream, eg:
     VieroWindowUtils.createElement('video', {

@@ -1,6 +1,6 @@
 {
   "name": "@viero/webrtc-sfu-client",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "WebRTC client library by @vieroinc.",
   "homepage": "https://github.com/vieroinc/viero-webrtc-sfu-client",
   "contributors": [
