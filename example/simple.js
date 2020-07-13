@@ -21,7 +21,7 @@ import { VieroLog } from '@viero/common/log';
 import { VieroWindowUtils as wu } from '@viero/common-web/window/utils';
 import { VieroWebRTCCommon } from '@viero/webrtc-common';
 
-import { VieroWebRTCSFUClient } from "../../sfu/index.js";
+import { VieroWebRTCSFUClient } from "../";
 
 const urlObj = new URL(location.href);
 const channel = urlObj.searchParams.get('channel');

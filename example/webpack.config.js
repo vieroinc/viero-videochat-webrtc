@@ -7,7 +7,7 @@ module.exports = {
   mode: 'development',
   entry: {
     // "multicfg/index": path.resolve(__dirname, "./multicfg/index.js"),
-    "sfu-simple/index": path.resolve(__dirname, "./sfu-simple/index.js"),
+    "simple": path.resolve(__dirname, "./simple.js"),
   },
   output: {
     path: path.resolve(__dirname, ""),

@@ -1,8 +1,8 @@
 {
-  "name": "@viero/webrtc-client",
-  "version": "1.0.1",
+  "name": "@viero/webrtc-sfu-client",
+  "version": "1.0.2",
   "description": "WebRTC client library by @vieroinc.",
-  "homepage": "https://github.com/vieroinc/viero-webrtc-client",
+  "homepage": "https://github.com/vieroinc/viero-webrtc-sfu-client",
   "contributors": [
     {
       "name": "Zoltan Gobolos",
@@ -12,14 +12,14 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vieroinc/viero-webrtc-client.git"
+    "url": "git+https://github.com/vieroinc/viero-webrtc-sfu-client.git"
   },
   "bugs": {
-    "url": "https://github.com/vieroinc/viero-webrtc-client/issues"
+    "url": "https://github.com/vieroinc/viero-webrtc-sfu-client/issues"
   },
   "scripts": {
-    "clean": "rm -rf p2p sfu",
-    "reset": "rm -rf p2p sfu node_modules",
+    "clean": "rm -rf index.js",
+    "reset": "rm -rf index.js node_modules",
     "babel": "babel src -d . --source-maps inline",
     "prepublishOnly": "babel src -d . --source-maps inline"
   },
