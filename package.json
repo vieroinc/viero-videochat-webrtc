@@ -1,6 +1,6 @@
 {
   "name": "@viero/webrtc-sfu-client",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "WebRTC client library by @vieroinc.",
   "homepage": "https://github.com/vieroinc/viero-webrtc-sfu-client",
   "contributors": [
@@ -33,7 +33,7 @@
   "dependencies": {
     "@viero/common": "^1.4.16",
     "@viero/webrtc-common": "^1.0.3",
-    "@viero/webrtc-signaling-client": "^1.1.5",
+    "@viero/webrtc-signaling-client": "^1.1.6",
     "@viero/webrtc-signaling-common": "^1.0.4",
     "event-target-shim": "^5.0.1",
     "webrtc-adapter": "^7.6.1"
