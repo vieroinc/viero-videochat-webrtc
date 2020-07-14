@@ -17,6 +17,7 @@
 'use-strict'
 
 import adapter from 'webrtc-adapter';
+import { EventTarget } from "event-target-shim";
 
 import { VieroError } from '@viero/common/error';
 import { VieroWebRTCSignalingCommon } from '@viero/webrtc-signaling-common';
@@ -236,6 +237,7 @@ export class VieroWebRTCSFUClient extends EventTarget {
     super();
 
     this._ = {
+      _eventTarget: new EventTarget(),
       _peerConnectionConfiguration: peerConnectionConfiguration || _defaultPeerConnectionConfiguration,
       _onEnterProxy: _onEnter.bind(null, this),
       _onMessageProxy: _onMessage.bind(null, this),
