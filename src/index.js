@@ -14,41 +14,43 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-'use-strict'
+'use-strict';
 
+// eslint-disable-next-line no-unused-vars
 import adapter from 'webrtc-adapter';
-import { EventTarget } from "event-target-shim";
+import { EventTarget } from 'event-target-shim';
 
 import { VieroError } from '@viero/common/error';
 import { VieroWebRTCSignalingCommon } from '@viero/webrtc-signaling-common';
 import { VieroWebRTCCommon } from '@viero/webrtc-common';
 
-
-const _defaultPeerConnectionConfiguration = {
+const DEFAULT_PEERCONNECTION_CONFIGURATION = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
   ],
 };
 
-const _socketId = (self) => {
-  if (self._.signaling && self._.signaling._socket && self._.signaling._socket.id) {
-    return self._.signaling._socket.id;
+const mySocketId = (self) => {
+  // eslint-disable-next-line no-underscore-dangle
+  if (self.$.signaling && self.$.signaling._socket && self.$.signaling._socket.id) {
+    // eslint-disable-next-line no-underscore-dangle
+    return self.$.signaling._socket.id;
   }
   return null;
 };
 
-const _onConnectionStateChange = (self, peer, evt) => {
+const onConnectionStateChange = (self, peer, evt) => {
   const value = evt.currentTarget.connectionState;
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.WEBRTC.STATE_DID_CHANGE, {
     detail: {
-      direction: !!peer ? 'in' : 'out',
-      id: !!peer ? peer.socketId : _socketId(self),
+      direction: peer ? 'in' : 'out',
+      id: peer ? peer.socketId : mySocketId(self),
       state: 'connectionState',
       value,
-    }
+    },
   }));
-  if ('disconnected' === value) {
-    if (!!peer) {
+  if (value === 'disconnected') {
+    if (peer) {
       // the peer's ipc disconnected
       // 1. we need to check whether signaling is still on
       // 2. if not, we must leave
@@ -59,77 +61,73 @@ const _onConnectionStateChange = (self, peer, evt) => {
       // 2. if not, we must leave
       // 3. if it is, we need to renegotiate
     }
-  } else if ('failed' === value) {
+  } else if (value === 'failed') {
     // not sure how to handle this
   }
 };
 
-const _onICECandidate = (self, peer, evt) => {
+const onICECandidate = (self, peer, evt) => {
   if (evt.candidate) {
-    self._.signaling.send({
+    self.$.signaling.send({
       word: VieroWebRTCCommon.WORD.CDT,
       data: JSON.parse(JSON.stringify(evt.candidate)),
-      ...(!!peer ? { on: peer.socketId } : {}),
+      ...(peer ? { on: peer.socketId } : {}),
     });
   }
 };
 
-const _onICEConnectionStateChange = (self, peer, evt) => {
+const onICEConnectionStateChange = (self, peer, evt) => {
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.WEBRTC.STATE_DID_CHANGE, {
     detail: {
-      direction: !!peer ? 'in' : 'out',
-      id: !!peer ? peer.socketId : _socketId(self),
+      direction: peer ? 'in' : 'out',
+      id: peer ? peer.socketId : mySocketId(self),
       state: 'iceConnectionState',
       value: evt.currentTarget.iceConnectionState,
-    }
+    },
   }));
 };
 
-const _onICEGatheringStateChange = (self, peer, evt) => {
+const onICEGatheringStateChange = (self, peer, evt) => {
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.WEBRTC.STATE_DID_CHANGE, {
     detail: {
-      direction: !!peer ? 'in' : 'out',
-      id: !!peer ? peer.socketId : _socketId(self),
+      direction: peer ? 'in' : 'out',
+      id: peer ? peer.socketId : mySocketId(self),
       state: 'iceGatheringState',
       value: evt.currentTarget.iceGatheringState,
-    }
+    },
   }));
 };
 
-const _onNegotiationNeeded = (self, peer, evt) => {
-  const pc = peer ? peer.ipc : self._.opc;
+const onNegotiationNeeded = (self, peer) => {
+  const pc = peer ? peer.ipc : self.$.opc;
   pc.createOffer()
-    .then((offer) => {
-      return pc.setLocalDescription(offer)
-    })
-    .then(() => {
-      return self._.signaling.send({
-        word: VieroWebRTCCommon.WORD.SDP,
-        data: JSON.parse(JSON.stringify(pc.localDescription)),
-      });
-    })
+    .then((offer) => pc.setLocalDescription(offer))
+    .then(() => self.$.signaling.send({
+      word: VieroWebRTCCommon.WORD.SDP,
+      data: JSON.parse(JSON.stringify(pc.localDescription)),
+    }))
     .catch((err) => {
       const error = new VieroError('/webrtc/sfu/client', 884761, { [VieroError.KEY.ERROR]: err });
       self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.ERROR, { detail: { error } }));
     });
 };
 
-const _onSignalingStateChange = (self, peer, evt) => {
+const onSignalingStateChange = (self, peer, evt) => {
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.WEBRTC.STATE_DID_CHANGE, {
     detail: {
-      direction: !!peer ? 'in' : 'out',
-      id: !!peer ? peer.socketId : _socketId(self),
+      direction: peer ? 'in' : 'out',
+      id: peer ? peer.socketId : mySocketId(self),
       state: 'signalingState',
       value: evt.currentTarget.signalingState,
-    }
+    },
   }));
 };
 
-const _onTrack = (self, peer, evt) => {
+const onTrack = (self, peer, evt) => {
   if (evt.streams && evt.streams.length) {
+    // eslint-disable-next-line prefer-destructuring
     peer.stream = evt.streams[0];
-    peer = self.peer(peer.socketId);
-    peer.stream.addEventListener('removetrack', (evt) => {
+    peer.stream.addEventListener('removetrack', () => {
       setTimeout(() => {
         self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.TRACK.DID_REMOVE, { detail: { peer } }));
       }, 0);
@@ -138,68 +136,65 @@ const _onTrack = (self, peer, evt) => {
   }
 };
 
-const _addPeer = (self, socketId) => {
-  const ipc = new RTCPeerConnection(self._._peerConnectionConfiguration);
+const stripPeer = (peer) => ({ socketId: peer.socketId, stream: peer.stream || new MediaStream([]) });
+
+const addPeer = (self, socketId) => {
+  const ipc = new RTCPeerConnection(self.$.peerConnectionConfiguration);
   const peer = { socketId, ipc, stream: new MediaStream([]) };
 
-  ipc.addEventListener('connectionstatechange', _onConnectionStateChange.bind(null, self, peer));
-  ipc.addEventListener('icecandidate', _onICECandidate.bind(null, self, peer));
-  ipc.addEventListener('iceconnectionstatechange', _onICEConnectionStateChange.bind(null, self, peer));
-  ipc.addEventListener('icegatheringstatechange', _onICEGatheringStateChange.bind(null, self, peer));
-  ipc.addEventListener('signalingstatechange', _onSignalingStateChange.bind(null, self, peer));
-  ipc.addEventListener('track', _onTrack.bind(null, self, peer));
+  ipc.addEventListener('connectionstatechange', onConnectionStateChange.bind(null, self, peer));
+  ipc.addEventListener('icecandidate', onICECandidate.bind(null, self, peer));
+  ipc.addEventListener('iceconnectionstatechange', onICEConnectionStateChange.bind(null, self, peer));
+  ipc.addEventListener('icegatheringstatechange', onICEGatheringStateChange.bind(null, self, peer));
+  ipc.addEventListener('signalingstatechange', onSignalingStateChange.bind(null, self, peer));
+  ipc.addEventListener('track', onTrack.bind(null, self, peer));
 
-  self._._peers[socketId] = peer;
-  self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_ENTER, { detail: { peer: _stripPeer(peer) } }));
+  self.$.peers[socketId] = peer;
+  self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_ENTER, { detail: { peer: stripPeer(peer) } }));
   return peer;
 };
 
-const _removePeer = (self, peer) => {
+const removePeer = (self, peer) => {
   peer.ipc.close();
-  delete self._._peers[peer.socketId];
-  self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_LEAVE, { detail: { peer: _stripPeer(peer) } }));
-}
+  delete self.$.peers[peer.socketId];
+  self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_LEAVE, { detail: { peer: stripPeer(peer) } }));
+};
 
-const _onEnter = (self, evt) => {
-  _addPeer(self, evt.detail.socketId);
-}
+const onEnter = (self, evt) => {
+  addPeer(self, evt.detail.socketId);
+};
 
-const _onLeave = (self, evt) => {
-  const peer = self._._peers[evt.detail.socketId];
+const onLeave = (self, evt) => {
+  const peer = self.$.peers[evt.detail.socketId];
   if (!peer) return;
-  _removePeer(self, peer);
-}
+  removePeer(self, peer);
+};
 
-const _onMessage = (self, evt) => {
-  const payload = evt.detail.payload;
+const onMessage = (self, evt) => {
+  const { payload } = evt.detail;
   switch (payload.word) {
     case VieroWebRTCCommon.WORD.HELLO: {
       return payload.data.forEach((socketId) => {
-        _addPeer(self, socketId);
+        addPeer(self, socketId);
       });
     }
     case VieroWebRTCCommon.WORD.SDP: {
       const sdp = new RTCSessionDescription(payload.data);
-      const peer = self._._peers[payload.on];
+      const peer = self.$.peers[payload.on];
       switch (sdp.type) {
         case 'offer': {
           // DONE
           // received an offer, answer it
-          const ipc = peer.ipc;
+          const { ipc } = peer;
           return ipc.setRemoteDescription(sdp)
-            .then(() => {
-              return ipc.createAnswer();
-            })
-            .then((answer) => {
-              return ipc.setLocalDescription(answer);
-            })
-            .then(() => {
-              return self._.signaling.send({
-                word: VieroWebRTCCommon.WORD.SDP,
-                on: payload.on,
-                data: JSON.parse(JSON.stringify(ipc.localDescription)),
-              });
-            }).catch((err) => {
+            .then(() => ipc.createAnswer())
+            .then((answer) => ipc.setLocalDescription(answer))
+            .then(() => self.$.signaling.send({
+              word: VieroWebRTCCommon.WORD.SDP,
+              on: payload.on,
+              data: JSON.parse(JSON.stringify(ipc.localDescription)),
+            }))
+            .catch((err) => {
               const error = new VieroError('/webrtc/sfu/client', 352177, { [VieroError.KEY.ERROR]: err });
               self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.ERROR, { detail: { error } }));
             });
@@ -207,92 +202,94 @@ const _onMessage = (self, evt) => {
         case 'answer': {
           // DONE
           // received an answer
-          return self._.opc.setRemoteDescription(sdp)
+          return self.$.opc.setRemoteDescription(sdp)
             .catch((err) => {
               const error = new VieroError('/webrtc/sfu/client', 645167, { [VieroError.KEY.ERROR]: err });
               self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.ERROR, { detail: { error } }));
             });
         }
-        default: return;
+        default: {
+          return Promise.resolve();
+        }
       }
     }
     case VieroWebRTCCommon.WORD.CDT: {
       const cdt = new RTCIceCandidate(payload.data);
-      return (payload.on ? self._._peers[payload.on].ipc : self._.opc).addIceCandidate(cdt)
+      return (payload.on ? self.$.peers[payload.on].ipc : self.$.opc).addIceCandidate(cdt)
         .catch((err) => {
-          const error = new VieroError('/webrtc/sfu/client', 518450, { [VieroError.KEY.ERROR]: err, data: payload.data });
+          const error = new VieroError('/webrtc/sfu/client', 518450, {
+            [VieroError.KEY.ERROR]: err, data: payload.data,
+          });
           self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.ERROR, { detail: { error } }));
         });
+    }
+    default: {
+      return Promise.resolve();
     }
   }
 };
 
-const _stripPeer = (peer) => {
-  return { socketId: peer.socketId, stream: peer.stream || new MediaStream([]) };
-};
-
 export class VieroWebRTCSFUClient extends EventTarget {
-
   constructor(peerConnectionConfiguration) {
     super();
 
-    this._ = {
-      _peerConnectionConfiguration: peerConnectionConfiguration || _defaultPeerConnectionConfiguration,
-      _onEnterProxy: _onEnter.bind(null, this),
-      _onMessageProxy: _onMessage.bind(null, this),
-      _onLeaveProxy: _onLeave.bind(null, this),
-      _peers: [],
+    this.$ = {
+      peerConnectionConfiguration: peerConnectionConfiguration || DEFAULT_PEERCONNECTION_CONFIGURATION,
+      onEnterProxy: onEnter.bind(null, this),
+      onMessageProxy: onMessage.bind(null, this),
+      onLeaveProxy: onLeave.bind(null, this),
+      peers: [],
       stream: new MediaStream([]),
     };
   }
 
   peer(socketId) {
-    const peer = this._._peers[socketId];
+    const peer = this.$.peers[socketId];
     if (peer) {
-      return _stripPeer(peer);
+      return stripPeer(peer);
     }
     return null;
   }
 
   peers() {
-    return Object.values(this._._peers).map((peer) => _stripPeer(peer));
+    return Object.values(this.$.peers).map((peer) => stripPeer(peer));
   }
 
   join(signaling) {
     this.leave();
     return signaling.connect().then(() => {
-      signaling.addEventListener(VieroWebRTCSignalingCommon.SIGNAL.ENTER, this._._onEnterProxy);
-      signaling.addEventListener(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, this._._onMessageProxy);
-      signaling.addEventListener(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, this._._onLeaveProxy);
-      const opc = new RTCPeerConnection(this._._peerConnectionConfiguration);
-      opc.addEventListener('connectionstatechange', _onConnectionStateChange.bind(null, this, null));
-      opc.addEventListener('icecandidate', _onICECandidate.bind(null, this, null));
-      opc.addEventListener('iceconnectionstatechange', _onICEConnectionStateChange.bind(null, this, null));
-      opc.addEventListener('icegatheringstatechange', _onICEGatheringStateChange.bind(null, this, null));
-      opc.addEventListener('signalingstatechange', _onSignalingStateChange.bind(null, this, null));
-      this._.signaling = signaling;
-      this._.opc = opc;
+      signaling.addEventListener(VieroWebRTCSignalingCommon.SIGNAL.ENTER, this.$.onEnterProxy);
+      signaling.addEventListener(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, this.$.onMessageProxy);
+      signaling.addEventListener(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, this.$.onLeaveProxy);
+      const opc = new RTCPeerConnection(this.$.peerConnectionConfiguration);
+      opc.addEventListener('connectionstatechange', onConnectionStateChange.bind(null, this, null));
+      opc.addEventListener('icecandidate', onICECandidate.bind(null, this, null));
+      opc.addEventListener('iceconnectionstatechange', onICEConnectionStateChange.bind(null, this, null));
+      opc.addEventListener('icegatheringstatechange', onICEGatheringStateChange.bind(null, this, null));
+      opc.addEventListener('signalingstatechange', onSignalingStateChange.bind(null, this, null));
+      this.$.signaling = signaling;
+      this.$.opc = opc;
     });
   }
 
   leave() {
-    if (this._.signaling) {
-      this._.signaling.removeEventListener(VieroWebRTCSignalingCommon.SIGNAL.ENTER, this._._onEnterProxy);
-      this._.signaling.removeEventListener(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, this._._onMessageProxy);
-      this._.signaling.removeEventListener(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, this._._onLeaveProxy);
-      this._.signaling.disconnect();
-      delete this._.signaling;
+    if (this.$.signaling) {
+      this.$.signaling.removeEventListener(VieroWebRTCSignalingCommon.SIGNAL.ENTER, this.$.onEnterProxy);
+      this.$.signaling.removeEventListener(VieroWebRTCSignalingCommon.SIGNAL.MESSAGE, this.$.onMessageProxy);
+      this.$.signaling.removeEventListener(VieroWebRTCSignalingCommon.SIGNAL.LEAVE, this.$.onLeaveProxy);
+      this.$.signaling.disconnect();
+      delete this.$.signaling;
     }
-    if (this._.opc) {
-      this._.opc.close();
-      delete this._.opc;
+    if (this.$.opc) {
+      this.$.opc.close();
+      delete this.$.opc;
     }
-    Object.values(this._._peers).forEach((peer) => {
+    Object.values(this.$.peers).forEach((peer) => {
       if (peer.stream) {
         peer.stream.getTracks().forEach((t) => t.stop());
       }
       peer.ipc.close();
-      delete this._._peers[peer.socketId];
+      delete this.$.peers[peer.socketId];
     });
   }
 
@@ -304,21 +301,21 @@ export class VieroWebRTCSFUClient extends EventTarget {
     }, []);
 
     // 2. save existing stream as previous
-    const previous = this._.stream;
+    const previous = this.$.stream;
 
     // 3. set new stream
-    this._.stream = new MediaStream(tracks);
+    this.$.stream = new MediaStream(tracks);
 
     // 4. remove tracks from opc
-    if (this._.opc) {
-      const senders = this._.opc.getSenders();
+    if (this.$.opc) {
+      const senders = this.$.opc.getSenders();
       if (senders.length) {
-        senders.forEach((sender) => this._.opc.removeTrack(sender));
+        senders.forEach((sender) => this.$.opc.removeTrack(sender));
       }
 
       // 5. add tracks to output stream
-      this._.stream.getTracks().forEach((track) => this._.opc.addTrack(track, this._.stream));
-      _onNegotiationNeeded(this);
+      this.$.stream.getTracks().forEach((track) => this.$.opc.addTrack(track, this.$.stream));
+      onNegotiationNeeded(this);
     }
 
     // 6. remove tracks from previous
@@ -328,7 +325,7 @@ export class VieroWebRTCSFUClient extends EventTarget {
         previous.removeTrack(t);
       });
     }
-    return this._.stream;
+    return this.$.stream;
   }
 
   static availableSources() {
