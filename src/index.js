@@ -125,7 +125,7 @@ const onSignalingStateChange = (self, peer, evt) => {
 
 const onTrack = (self, peer, evt) => {
   if (evt.streams && evt.streams.length) {
-    // eslint-disable-next-line prefer-destructuring
+    // eslint-disable-next-line prefer-destructuring, no-param-reassign
     peer.stream = evt.streams[0];
     peer.stream.addEventListener('removetrack', () => {
       setTimeout(() => {
@@ -149,6 +149,7 @@ const addPeer = (self, socketId) => {
   ipc.addEventListener('signalingstatechange', onSignalingStateChange.bind(null, self, peer));
   ipc.addEventListener('track', onTrack.bind(null, self, peer));
 
+  // eslint-disable-next-line no-param-reassign
   self.$.peers[socketId] = peer;
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_ENTER, { detail: { peer: stripPeer(peer) } }));
   return peer;
@@ -156,6 +157,7 @@ const addPeer = (self, socketId) => {
 
 const removePeer = (self, peer) => {
   peer.ipc.close();
+  // eslint-disable-next-line no-param-reassign
   delete self.$.peers[peer.socketId];
   self.dispatchEvent(new CustomEvent(VieroWebRTCCommon.EVENT.PEER.DID_LEAVE, { detail: { peer: stripPeer(peer) } }));
 };
