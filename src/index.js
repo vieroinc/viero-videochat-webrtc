@@ -329,32 +329,4 @@ export class VieroWebRTCSFUClient extends EventTarget {
     }
     return this.$.stream;
   }
-
-  static availableSources() {
-    return navigator.mediaDevices.enumerateDevices()
-      .then((devices) => devices.reduce((acc, device) => {
-        acc[device.groupId] = acc[device.groupId] || {};
-        acc[device.groupId][device.deviceId] = {
-          kind: device.kind,
-          label: device.label,
-        };
-        return acc;
-      }, {}));
-  }
-
-  static canCreateUserStream() {
-    return !!navigator.mediaDevices && !!navigator.mediaDevices.getUserMedia;
-  }
-
-  static createUserStream(configuration) {
-    return navigator.mediaDevices.getUserMedia(configuration);
-  }
-
-  static canCreateDisplayStream() {
-    return !!navigator.mediaDevices && !!navigator.mediaDevices.getDisplayMedia;
-  }
-
-  static createDisplayStream(configuration) {
-    return navigator.mediaDevices.getDisplayMedia(configuration);
-  }
 }
